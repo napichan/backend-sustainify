@@ -1,24 +1,30 @@
-<h2>Input Aktivitas Transportasi</h2>
-
-@if(session('success'))
-    <p style="color:green">{{ session('success') }}</p>
-@endif
-
-<form method="POST" action="/transportasi">
+<form action="/transportasi" method="POST">
     @csrf
 
-    <label>Jarak (km):</label>
-    <input type="number" name="jarak_km" required><br><br>
+    
+    @if(session('success'))
+        <p style="color: green;">{{ session('success') }}</p>
+    @endif
 
-    <label>Kendaraan:</label>
-    <select name="kendaraan_id">
-        @foreach($kendaraan as $k)
-            <option value="{{ $k->id }}">{{ $k->nama_kendaraan }}</option>
+    
+    <label>Pilih Kendaraan</label><br>
+    <select name="kendaraan_id" required>
+        <option value="">-- Pilih Kendaraan --</option>
+        @foreach ($kendaraan as $item)
+            <option value="{{ $item->id }}">
+                {{ $item->nama_kendaraan }}
+            </option>
         @endforeach
-    </select><br><br>
+    </select>
 
-    <label>Tanggal:</label>
-    <input type="date" name="tanggal" required><br><br>
+    <br><br>
 
+    
+    <label>Jarak (km)</label><br>
+    <input type="number" name="jarak_km" placeholder="Masukkan jarak" required>
+
+    <br><br>
+
+    
     <button type="submit">Simpan</button>
 </form>
