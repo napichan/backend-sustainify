@@ -2,40 +2,47 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Kendaraan;
 use App\Models\AktivitasTransportasi;
+use App\Models\Kendaraan;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class AktivitasTransportasiController extends Controller
 {
     public function create()
     {
-        $kendaraan = Kendaraan::all();
+        $kendaraan =  Kendaraan::all();
         return view('transportasi.create', compact('kendaraan'));
     }
 
     public function store(Request $request)
     {
-        $kendaraan = Kendaraan::find($request->kendaraan_id);
+        $kendaraan = Kendaraan::find($request->kendaraan_id, 'id');
 
         $emisi = $request->jarak_km * $kendaraan->faktor_emisi;
 
-        AktivitasTransportasi::create([
-            
+        $aktivitas = AktivitasTransportasi::create([
+            'user_id' => $request->user() ? $request->user()->id : 1, // Fallback to 1 if not logged in for testing, though auth middleware will protect it
             'kendaraan_id' => $request->kendaraan_id,
             'jarak_km' => $request->jarak_km,
             'emisi_karbon' => $emisi,
             'tanggal' => now()
         ]);
 
-        return redirect()->back()->with('success', 'Data berhasil disimpan!');
+        return response()->json([
+            'message' => 'Data berhasil disimpan!',
+            'data' => $aktivitas
+        ], 201);
     }
 
     
-    public function index()
+    public function index(Request $request)
     {
-        $data = AktivitasTransportasi::with('kendaraan')->get();
-        return view('transportasi.index', compact('data'));
+        $user_id = $request->user() ? $request->user()->id : 1;
+        $data = AktivitasTransportasi::with('kendaraan')->where('user_id', $user_id)->get();
+        return response()->json([
+            'data'=> $data
+        ]);
     }
 
     public function edit($id)
@@ -43,7 +50,7 @@ class AktivitasTransportasiController extends Controller
         $data = AktivitasTransportasi::find($id);
         $kendaraan = Kendaraan::all();
 
-        return view('transportasi.edit', compact('data', 'kendaraan'));
+        return response()->json(['data' => $data, 'kendaraan' => $kendaraan]);
     }
 
 
@@ -58,10 +65,13 @@ class AktivitasTransportasiController extends Controller
             'kendaraan_id' => $request->kendaraan_id,
             'jarak_km' => $request->jarak_km,
             'emisi_karbon' => $emisi,
-            'tanggal' => $request->tanggal
+            'tanggal' => $request->tanggal ?? now()
         ]);
 
-        return redirect('/transportasi/riwayat')->with('success', 'Data berhasil diupdate!');
+        return response()->json([
+            'message' => 'Data berhasil diupdate!',
+            'data' => $data
+        ]);
     }
 
   
@@ -70,6 +80,6 @@ class AktivitasTransportasiController extends Controller
         $data = AktivitasTransportasi::find($id);
         $data->delete();
 
-        return redirect('/transportasi/riwayat')->with('success', 'Data berhasil dihapus!');
+        return response()->json(['message' => 'Data berhasil dihapus!']);
     }
 }
