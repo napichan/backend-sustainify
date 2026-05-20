@@ -5,11 +5,18 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 
 use App\Http\Controllers\AktivitasTransportasiController;
+use App\Http\Controllers\AktivitasRumahTanggaController;
 use App\Http\Controllers\KendaraanController;
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('aktivitas', AktivitasTransportasiController::class);
+
+    Route::get('/rumah-tangga', [AktivitasRumahTanggaController::class, 'index']);
+    Route::post('/rumah-tangga', [AktivitasRumahTanggaController::class, 'store']);
+    Route::put('/rumah-tangga/{id}', [AktivitasRumahTanggaController::class, 'update']);
+    Route::delete('/rumah-tangga/{id}', [AktivitasRumahTanggaController::class, 'destroy']);
 });
+
 
 Route::get('/kendaraan', [KendaraanController::class, 'index']);
 

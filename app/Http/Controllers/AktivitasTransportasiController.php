@@ -2,27 +2,48 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
 use App\Models\AktivitasTransportasi;
 use App\Models\Kendaraan;
-use Illuminate\Http\Request;
-use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
+
 
 class AktivitasTransportasiController extends Controller
 {
     public function create()
     {
-        $kendaraan =  Kendaraan::all();
+        $kendaraan = Kendaraan::all();
+
         return view('transportasi.create', compact('kendaraan'));
+    }
+
+    public function index(Request $request)
+    {
+        $user_id = Auth::id();
+
+        $data = AktivitasTransportasi::with('kendaraan')
+            ->where('user_id', $user_id)
+            ->get();
+
+        return response()->json([
+            'data' => $data
+        ]);
     }
 
     public function store(Request $request)
     {
-        $kendaraan = Kendaraan::find($request->kendaraan_id, 'id');
+        $kendaraan = Kendaraan::find($request->kendaraan_id);
+
+        if (!$kendaraan) {
+            return response()->json([
+                'message' => 'Kendaraan tidak ditemukan'
+            ], 404);
+        }
 
         $emisi = $request->jarak_km * $kendaraan->faktor_emisi;
 
         $aktivitas = AktivitasTransportasi::create([
-            'user_id' => $request->user() ? $request->user()->id : 1, // Fallback to 1 if not logged in for testing, though auth middleware will protect it
+            'user_id' => Auth::id(),
             'kendaraan_id' => $request->kendaraan_id,
             'jarak_km' => $request->jarak_km,
             'emisi_karbon' => $emisi,
@@ -31,34 +52,46 @@ class AktivitasTransportasiController extends Controller
 
         return response()->json([
             'message' => 'Data berhasil disimpan!',
-            'data' => $aktivitas
+            'data' => $aktivitas->load('kendaraan')
         ], 201);
-    }
-
-    
-    public function index(Request $request)
-    {
-        $user_id = $request->user() ? $request->user()->id : 1;
-        $data = AktivitasTransportasi::with('kendaraan')->where('user_id', $user_id)->get();
-        return response()->json([
-            'data'=> $data
-        ]);
     }
 
     public function edit($id)
     {
-        $data = AktivitasTransportasi::find($id);
+        $data = AktivitasTransportasi::with('kendaraan')->where('user_id', Auth::id())->find($id);
+
+        if (!$data) {
+            return response()->json([
+                'message' => 'Data tidak ditemukan'
+            ], 404);
+        }
+
         $kendaraan = Kendaraan::all();
 
-        return response()->json(['data' => $data, 'kendaraan' => $kendaraan]);
+        return response()->json([
+            'data' => $data,
+            'kendaraan' => $kendaraan
+        ]);
     }
-
 
     public function update(Request $request, $id)
     {
-        $data = AktivitasTransportasi::find($id);
+        $data = AktivitasTransportasi::where('user_id', Auth::id())->find($id);
+
+        if (!$data) {
+            return response()->json([
+                'message' => 'Data tidak ditemukan'
+            ], 404);
+        }
 
         $kendaraan = Kendaraan::find($request->kendaraan_id);
+
+        if (!$kendaraan) {
+            return response()->json([
+                'message' => 'Kendaraan tidak ditemukan'
+            ], 404);
+        }
+
         $emisi = $request->jarak_km * $kendaraan->faktor_emisi;
 
         $data->update([
@@ -70,16 +103,24 @@ class AktivitasTransportasiController extends Controller
 
         return response()->json([
             'message' => 'Data berhasil diupdate!',
-            'data' => $data
+            'data' => $data->load('kendaraan')
         ]);
     }
 
-  
     public function destroy($id)
     {
-        $data = AktivitasTransportasi::find($id);
+        $data = AktivitasTransportasi::where('user_id', Auth::id())->find($id);
+
+        if (!$data) {
+            return response()->json([
+                'message' => 'Data tidak ditemukan'
+            ], 404);
+        }
+
         $data->delete();
 
-        return response()->json(['message' => 'Data berhasil dihapus!']);
+        return response()->json([
+            'message' => 'Data berhasil dihapus!'
+        ]);
     }
 }
