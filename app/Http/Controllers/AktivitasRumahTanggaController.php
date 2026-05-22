@@ -4,10 +4,18 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\AktivitasRumahTangga;
+use App\Models\RumahTangga;
 use Illuminate\Support\Facades\Auth;
 
 class AktivitasRumahTanggaController extends Controller
 {
+    // Ambil faktor emisi dari database
+    private function getFaktorEmisi($jenis_aktivitas)
+    {
+        $rumahTangga = RumahTangga::where('nama_aktivitas', $jenis_aktivitas)->first();
+        return $rumahTangga ? $rumahTangga->faktor_emisi : 0;
+    }
+
     public function index()
     {
         $data = AktivitasRumahTangga::where('user_id', Auth::id())->get();
@@ -19,14 +27,7 @@ class AktivitasRumahTanggaController extends Controller
 
     public function store(Request $request)
     {
-        $faktors = [
-            'ac' => 0.4,
-            'lampu' => 0.01,
-            'tv' => 0.05,
-            'kulkas' => 0.1,
-        ];
-
-        $emisi = $request->durasi_jam * ($faktors[$request->jenis_aktivitas] ?? 0);
+        $emisi = $request->durasi_jam * $this->getFaktorEmisi($request->jenis_aktivitas);
 
         $aktivitas = AktivitasRumahTangga::create([
             'user_id' => Auth::id(),
@@ -43,36 +44,29 @@ class AktivitasRumahTanggaController extends Controller
     }
 
     public function update(Request $request, $id)
-{
-    $data = AktivitasRumahTangga::where('user_id', Auth::id())->find($id);
+    {
+        $data = AktivitasRumahTangga::where('user_id', Auth::id())->find($id);
 
-    if (!$data) {
+        if (!$data) {
+            return response()->json([
+                'message' => 'Data tidak ditemukan'
+            ], 404);
+        }
+
+        $emisi = $request->durasi_jam * $this->getFaktorEmisi($request->jenis_aktivitas);
+
+        $data->update([
+            'jenis_aktivitas' => $request->jenis_aktivitas,
+            'durasi_jam' => $request->durasi_jam,
+            'emisi_karbon' => $emisi,
+            'tanggal' => $request->tanggal ?? now(),
+        ]);
+
         return response()->json([
-            'message' => 'Data tidak ditemukan'
-        ], 404);
+            'message' => 'Data berhasil diupdate!',
+            'data' => $data
+        ]);
     }
-
-    $faktors = [
-        'ac' => 0.4,
-        'lampu' => 0.01,
-        'tv' => 0.05,
-        'kulkas' => 0.1,
-    ];
-
-    $emisi = $request->durasi_jam * ($faktors[$request->jenis_aktivitas] ?? 0);
-
-    $data->update([
-        'jenis_aktivitas' => $request->jenis_aktivitas,
-        'durasi_jam' => $request->durasi_jam,
-        'emisi_karbon' => $emisi,
-        'tanggal' => $request->tanggal ?? now(),
-    ]);
-
-    return response()->json([
-        'message' => 'Data berhasil diupdate!',
-        'data' => $data
-    ]);
-}
 
     public function destroy($id)
     {
