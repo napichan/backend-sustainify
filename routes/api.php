@@ -9,7 +9,15 @@ use App\Http\Controllers\AktivitasRumahTanggaController;
 use App\Http\Controllers\KendaraanController;
 use App\Http\Controllers\RumahTanggaController; // ← tambahan
 
-Route::middleware('auth:sanctum')->group(function () {
+use App\Http\Controllers\AdminController;
+
+    // Admin routes
+    Route::get('/admin/users', [AdminController::class, 'getUsers']);
+    Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser']);
+    Route::get('/admin/aktivitas', [AdminController::class, 'getAllAktivitas']);
+    Route::get('/admin/stats', [AdminController::class, 'getStats']);
+
+    Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('aktivitas', AktivitasTransportasiController::class);
 
     Route::get('/rumah-tangga', [AktivitasRumahTanggaController::class, 'index']);
@@ -18,10 +26,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/rumah-tangga/{id}', [AktivitasRumahTanggaController::class, 'destroy']);
 });
 
-Route::get('/kendaraan', [KendaraanController::class, 'index']);
-Route::get('/rumah-tangga-list', [RumahTanggaController::class, 'index']); // ← tambahan
+    Route::get('/kendaraan', [KendaraanController::class, 'index']);
+    Route::get('/rumah-tangga-list', [RumahTanggaController::class, 'index']); // ← tambahan
 
-Route::post('/login', function (Request $request) {
+    Route::post('/login', function (Request $request) {
     try {
         $validated = $request->validate([
             'email' => 'required|email',
