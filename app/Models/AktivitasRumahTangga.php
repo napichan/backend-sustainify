@@ -15,4 +15,9 @@ class AktivitasRumahTangga extends Model
         'emisi_karbon',
         'tanggal',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }
