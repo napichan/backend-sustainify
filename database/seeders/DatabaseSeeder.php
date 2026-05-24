@@ -41,5 +41,8 @@ class DatabaseSeeder extends Seeder
                 $k
             );
         }
+
+        // 3. Data Rumah Tangga
+        $this->call(RumahTanggaSeeder::class);
     }
 }
