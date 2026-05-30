@@ -12,6 +12,7 @@ use App\Http\Controllers\AdminController;
 
 // Admin routes
 Route::get('/admin/users', [AdminController::class, 'getUsers']);
+Route::put('/admin/users/{id}', [AdminController::class, 'updateUser']);
 Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser']);
 Route::get('/admin/aktivitas', [AdminController::class, 'getAllAktivitas']);
 Route::get('/admin/stats', [AdminController::class, 'getStats']);

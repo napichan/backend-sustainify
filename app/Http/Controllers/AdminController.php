@@ -29,6 +29,25 @@ class AdminController extends Controller
         return response()->json(['data' => $users]);
     }
 
+    // ── Update user ──────────────────────────────────────────
+    public function updateUser(Request $request, $id)
+    {
+        $user = User::find($id);
+        if (!$user) {
+            return response()->json(['message' => 'User tidak ditemukan'], 404);
+        }
+
+        $user->update([
+            'name'  => $request->name  ?? $user->name,
+            'email' => $request->email ?? $user->email,
+        ]);
+
+        return response()->json([
+            'message' => 'User berhasil diupdate!',
+            'data'    => $user,
+        ]);
+    }
+
     // ── Hapus user ───────────────────────────────────────────
     public function deleteUser($id)
     {
@@ -59,12 +78,12 @@ class AdminController extends Controller
         $rumahTangga = AktivitasRumahTangga::with('user')->get()
             ->map(function ($item) {
                 $labelMap = [
-                    'ac'          => 'Penggunaan AC',
-                    'lampu'       => 'Lampu',
-                    'tv'          => 'TV',
-                    'kulkas'      => 'Kulkas',
-                    'ricecooker'  => 'Rice Cooker',
-                    'kipas'       => 'Kipas Angin',
+                    'ac'         => 'Penggunaan AC',
+                    'lampu'      => 'Lampu',
+                    'tv'         => 'TV',
+                    'kulkas'     => 'Kulkas',
+                    'ricecooker' => 'Rice Cooker',
+                    'kipas'      => 'Kipas Angin',
                 ];
                 return [
                     'id'        => 'RT' . $item->id,
@@ -92,7 +111,6 @@ class AdminController extends Controller
         $totalEmisiR = AktivitasRumahTangga::sum('emisi_karbon');
         $totalEmisi  = round($totalEmisiT + $totalEmisiR, 2);
 
-        // Emisi per bulan
         $emisiPerBulan = AktivitasTransportasi::selectRaw('MONTH(tanggal) as bulan, SUM(emisi_karbon) as total')
             ->groupBy('bulan')
             ->orderBy('bulan')
@@ -104,7 +122,6 @@ class AdminController extends Controller
             ->orderBy('bulan')
             ->get();
 
-        // Gabungkan emisi per bulan
         $bulanMap = [];
         foreach ($emisiPerBulan as $item) {
             $bulanMap[$item['bulan']] = ($bulanMap[$item['bulan']] ?? 0) + $item['emisi'];
@@ -120,9 +137,9 @@ class AdminController extends Controller
         ])->values();
 
         return response()->json([
-            'total_user'   => $totalUser,
-            'total_emisi'  => $totalEmisi,
-            'chart_data'   => $chartData,
+            'total_user'  => $totalUser,
+            'total_emisi' => $totalEmisi,
+            'chart_data'  => $chartData,
         ]);
     }
 }
