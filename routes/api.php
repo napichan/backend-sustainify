@@ -10,6 +10,8 @@ use App\Http\Controllers\KendaraanController;
 use App\Http\Controllers\RumahTanggaController;
 use App\Http\Controllers\AdminController;
 
+use App\Http\Controllers\LaporanController;
+
 // Admin routes
 Route::get('/admin/users', [AdminController::class, 'getUsers']);
 Route::put('/admin/users/{id}', [AdminController::class, 'updateUser']);
@@ -24,6 +26,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/rumah-tangga', [AktivitasRumahTanggaController::class, 'store']);
     Route::put('/rumah-tangga/{id}', [AktivitasRumahTanggaController::class, 'update']);
     Route::delete('/rumah-tangga/{id}', [AktivitasRumahTanggaController::class, 'destroy']);
+
+Route::get('/laporan/transportasi', [LaporanController::class, 'laporanTransportasi']);
+Route::get('/laporan/rumah-tangga', [LaporanController::class, 'laporanRumahTangga']);
+Route::get('/laporan/ringkasan',    [LaporanController::class, 'laporanRingkasan']); 
+
 
     // Update profile
     Route::put('/profile', function (Request $request) {
