@@ -11,7 +11,7 @@ public function up(): void
     Schema::create('aktivitas_rumah_tangga', function (Blueprint $table) {
         $table->id();
         $table->foreignId('user_id')->constrained()->onDelete('cascade');
-        $table->string('jenis_aktivitas');
+        $table->foreignId('aktivitas_id')->constrained('rumah_tangga')->onDelete('cascade');
         $table->float('durasi_jam');
         $table->float('emisi_karbon');
         $table->date('tanggal');

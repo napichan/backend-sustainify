@@ -10,7 +10,7 @@ class AktivitasRumahTangga extends Model
 
     protected $fillable = [
         'user_id',
-        'jenis_aktivitas',
+        'aktivitas_id',
         'durasi_jam',
         'emisi_karbon',
         'tanggal',
@@ -19,5 +19,10 @@ class AktivitasRumahTangga extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function rumahTangga()
+    {
+        return $this->belongsTo(RumahTangga::class, 'aktivitas_id');
     }
 }
