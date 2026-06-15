@@ -9,30 +9,30 @@ use App\Http\Controllers\AktivitasRumahTanggaController;
 use App\Http\Controllers\KendaraanController;
 use App\Http\Controllers\RumahTanggaController;
 use App\Http\Controllers\AdminController;
-
 use App\Http\Controllers\LaporanController;
 
-// Admin routes
-Route::get('/admin/users', [AdminController::class, 'getUsers']);
-Route::put('/admin/users/{id}', [AdminController::class, 'updateUser']);
-Route::delete('/admin/users/{id}', [AdminController::class, 'deleteUser']);
-Route::get('/admin/aktivitas', [AdminController::class, 'getAllAktivitas']);
-Route::get('/admin/stats', [AdminController::class, 'getStats']);
+// ✅ Admin routes — dilindungi auth:sanctum
+Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
+    Route::get('/users',           [AdminController::class, 'getUsers']);
+    Route::put('/users/{id}',      [AdminController::class, 'updateUser']);
+    Route::delete('/users/{id}',   [AdminController::class, 'deleteUser']);
+    Route::get('/aktivitas',       [AdminController::class, 'getAllAktivitas']);
+    Route::get('/stats',           [AdminController::class, 'getStats']);
+});
 
+// User routes — dilindungi auth:sanctum
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('aktivitas', AktivitasTransportasiController::class);
 
-    Route::get('/rumah-tangga', [AktivitasRumahTanggaController::class, 'index']);
-    Route::post('/rumah-tangga', [AktivitasRumahTanggaController::class, 'store']);
-    Route::put('/rumah-tangga/{id}', [AktivitasRumahTanggaController::class, 'update']);
-    Route::delete('/rumah-tangga/{id}', [AktivitasRumahTanggaController::class, 'destroy']);
+    Route::get('/rumah-tangga',        [AktivitasRumahTanggaController::class, 'index']);
+    Route::post('/rumah-tangga',       [AktivitasRumahTanggaController::class, 'store']);
+    Route::put('/rumah-tangga/{id}',   [AktivitasRumahTanggaController::class, 'update']);
+    Route::delete('/rumah-tangga/{id}',[AktivitasRumahTanggaController::class, 'destroy']);
 
-Route::get('/laporan/transportasi', [LaporanController::class, 'laporanTransportasi']);
-Route::get('/laporan/rumah-tangga', [LaporanController::class, 'laporanRumahTangga']);
-Route::get('/laporan/ringkasan',    [LaporanController::class, 'laporanRingkasan']); 
+    Route::get('/laporan/transportasi', [LaporanController::class, 'laporanTransportasi']);
+    Route::get('/laporan/rumah-tangga', [LaporanController::class, 'laporanRumahTangga']);
+    Route::get('/laporan/ringkasan',    [LaporanController::class, 'laporanRingkasan']);
 
-
-    // Update profile
     Route::put('/profile', function (Request $request) {
         $user = $request->user();
 
@@ -53,13 +53,14 @@ Route::get('/laporan/ringkasan',    [LaporanController::class, 'laporanRingkasan
     });
 });
 
-Route::get('/kendaraan', [KendaraanController::class, 'index']);
+// Public routes
+Route::get('/kendaraan',       [KendaraanController::class, 'index']);
 Route::get('/rumah-tangga-list', [RumahTanggaController::class, 'index']);
 
 Route::post('/login', function (Request $request) {
     try {
         $validated = $request->validate([
-            'email' => 'required|email',
+            'email'    => 'required|email',
             'password' => 'required'
         ]);
 
@@ -70,21 +71,21 @@ Route::post('/login', function (Request $request) {
             ], 401);
         }
 
-        $user = Auth::user();
+        $user  = Auth::user();
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'success' => true,
             'message' => 'Login berhasil',
-            'token' => $token,
-            'user' => $user
+            'token'   => $token,
+            'user'    => $user
         ], 200);
 
     } catch (\Exception $e) {
         return response()->json([
             'success' => false,
             'message' => 'Terjadi kesalahan server',
-            'error' => $e->getMessage()
+            'error'   => $e->getMessage()
         ], 500);
     }
 });
@@ -92,15 +93,15 @@ Route::post('/login', function (Request $request) {
 Route::post('/register', function (Request $request) {
     try {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6'
         ]);
 
         $user = \App\Models\User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => $validated['password'], // cast 'hashed' di User.php yang hash
+            'name'     => $validated['name'],
+            'email'    => $validated['email'],
+            'password' => $validated['password'],
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -108,21 +109,21 @@ Route::post('/register', function (Request $request) {
         return response()->json([
             'success' => true,
             'message' => 'Pendaftaran berhasil',
-            'token' => $token,
-            'user' => $user
+            'token'   => $token,
+            'user'    => $user
         ], 201);
 
     } catch (\Illuminate\Validation\ValidationException $e) {
         return response()->json([
             'success' => false,
             'message' => 'Validasi gagal',
-            'errors' => $e->errors()
+            'errors'  => $e->errors()
         ], 422);
     } catch (\Exception $e) {
         return response()->json([
             'success' => false,
             'message' => 'Terjadi kesalahan server',
-            'error' => $e->getMessage()
+            'error'   => $e->getMessage()
         ], 500);
     }
 });

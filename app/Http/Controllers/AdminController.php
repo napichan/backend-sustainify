@@ -3,143 +3,120 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\User;
-use App\Models\AktivitasTransportasi;
-use App\Models\AktivitasRumahTangga;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
 {
-    // ── Get semua user ───────────────────────────────────────
+    // Hanya tampilkan user biasa (bukan admin)
     public function getUsers()
     {
-        $users = User::all()->map(function ($user) {
-            $emisiTransportasi = AktivitasTransportasi::where('user_id', $user->id)
-                ->sum('emisi_karbon');
-            $emisiRumahTangga = AktivitasRumahTangga::where('user_id', $user->id)
-                ->sum('emisi_karbon');
-
-            return [
-                'id'    => $user->id,
-                'name'  => $user->name,
-                'email' => $user->email,
-                'emisi' => round($emisiTransportasi + $emisiRumahTangga, 2),
-            ];
-        });
-
-        return response()->json(['data' => $users]);
-    }
-
-    // ── Update user ──────────────────────────────────────────
-    public function updateUser(Request $request, $id)
-    {
-        $user = User::find($id);
-        if (!$user) {
-            return response()->json(['message' => 'User tidak ditemukan'], 404);
-        }
-
-        $user->update([
-            'name'  => $request->name  ?? $user->name,
-            'email' => $request->email ?? $user->email,
-        ]);
-
-        return response()->json([
-            'message' => 'User berhasil diupdate!',
-            'data'    => $user,
-        ]);
-    }
-
-    // ── Hapus user ───────────────────────────────────────────
-    public function deleteUser($id)
-    {
-        $user = User::find($id);
-        if (!$user) {
-            return response()->json(['message' => 'User tidak ditemukan'], 404);
-        }
-        $user->delete();
-        return response()->json(['message' => 'User berhasil dihapus']);
-    }
-
-    // ── Get semua aktivitas semua user ───────────────────────
-    public function getAllAktivitas()
-    {
-        $transportasi = AktivitasTransportasi::with(['user', 'kendaraan'])->get()
-            ->map(function ($item) {
-                return [
-                    'id'        => $item->id,
-                    'nama'      => $item->user->name ?? '-',
-                    'tanggal'   => $item->tanggal,
-                    'aktivitas' => 'Transportasi',
-                    'detail'    => $item->kendaraan->nama_kendaraan ?? '-',
-                    'jumlah'    => $item->jarak_km . ' km',
-                    'emisi'     => round($item->emisi_karbon, 2),
-                ];
-            });
-
-        $rumahTangga = AktivitasRumahTangga::with('user')->get()
-            ->map(function ($item) {
-                $labelMap = [
-                    'ac'         => 'Penggunaan AC',
-                    'lampu'      => 'Lampu',
-                    'tv'         => 'TV',
-                    'kulkas'     => 'Kulkas',
-                    'ricecooker' => 'Rice Cooker',
-                    'kipas'      => 'Kipas Angin',
-                ];
-                return [
-                    'id'        => 'RT' . $item->id,
-                    'nama'      => $item->user->name ?? '-',
-                    'tanggal'   => $item->tanggal,
-                    'aktivitas' => 'Rumah Tangga',
-                    'detail'    => $labelMap[$item->jenis_aktivitas] ?? $item->jenis_aktivitas,
-                    'jumlah'    => $item->durasi_jam . ' jam',
-                    'emisi'     => round($item->emisi_karbon, 2),
-                ];
-            });
-
-        $combined = $transportasi->concat($rumahTangga)
-            ->sortByDesc('tanggal')
-            ->values();
-
-        return response()->json(['data' => $combined]);
-    }
-
-    // ── Get statistik untuk dashboard admin ──────────────────
-    public function getStats()
-    {
-        $totalUser   = User::count();
-        $totalEmisiT = AktivitasTransportasi::sum('emisi_karbon');
-        $totalEmisiR = AktivitasRumahTangga::sum('emisi_karbon');
-        $totalEmisi  = round($totalEmisiT + $totalEmisiR, 2);
-
-        $emisiPerBulan = AktivitasTransportasi::selectRaw('MONTH(tanggal) as bulan, SUM(emisi_karbon) as total')
-            ->groupBy('bulan')
-            ->orderBy('bulan')
-            ->get()
-            ->map(fn($i) => ['bulan' => $i->bulan, 'emisi' => round($i->total, 2)]);
-
-        $emisiRPerBulan = AktivitasRumahTangga::selectRaw('MONTH(tanggal) as bulan, SUM(emisi_karbon) as total')
-            ->groupBy('bulan')
-            ->orderBy('bulan')
+        $users = DB::table('users')
+            ->where('role', '!=', 'admin')
+            ->select('id', 'name', 'email', 'role', 'created_at')
             ->get();
 
-        $bulanMap = [];
-        foreach ($emisiPerBulan as $item) {
-            $bulanMap[$item['bulan']] = ($bulanMap[$item['bulan']] ?? 0) + $item['emisi'];
-        }
-        foreach ($emisiRPerBulan as $item) {
-            $bulanMap[$item->bulan] = ($bulanMap[$item->bulan] ?? 0) + round($item->total, 2);
+        return response()->json($users);
+    }
+
+    public function updateUser(Request $request, $id)
+    {
+        $user = DB::table('users')->where('id', $id)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'User tidak ditemukan'], 404);
         }
 
-        $namaBulan = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-        $chartData = collect($bulanMap)->map(fn($emisi, $bulan) => [
-            'bulan' => $namaBulan[$bulan],
-            'emisi' => round($emisi, 2),
-        ])->values();
+        $data = [];
+        if ($request->name)  $data['name']  = $request->name;
+        if ($request->email) $data['email'] = $request->email;
+
+        DB::table('users')->where('id', $id)->update($data);
+
+        return response()->json(['success' => true, 'message' => 'User berhasil diupdate']);
+    }
+
+    public function deleteUser($id)
+    {
+        $user = DB::table('users')->where('id', $id)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'User tidak ditemukan'], 404);
+        }
+
+        // Jangan bisa hapus admin
+        if ($user->role === 'admin') {
+            return response()->json(['message' => 'Admin tidak bisa dihapus'], 403);
+        }
+
+        DB::table('users')->where('id', $id)->delete();
+
+        return response()->json(['success' => true, 'message' => 'User berhasil dihapus']);
+    }
+
+    public function getAllAktivitas()
+    {
+        $transportasi = DB::table('aktivitas_transportasi as at')
+            ->join('kendaraan as k', 'at.kendaraan_id', '=', 'k.id')
+            ->join('users as u', 'at.user_id', '=', 'u.id')
+            ->select(
+                'u.name as nama_user',
+                'u.email',
+                DB::raw('"Transportasi" as kategori'),
+                'k.nama_kendaraan as aktivitas',
+                'at.jarak_km',
+                DB::raw('NULL as durasi_jam'),
+                'at.emisi_karbon',
+                'at.tanggal'
+            )
+            ->get();
+
+        $rumahTangga = DB::table('aktivitas_rumah_tangga as art')
+            ->join('rumah_tangga as rt', 'art.aktivitas_id', '=', 'rt.id')
+            ->join('users as u', 'art.user_id', '=', 'u.id')
+            ->select(
+                'u.name as nama_user',
+                'u.email',
+                DB::raw('"Rumah Tangga" as kategori'),
+                'rt.nama_aktivitas as aktivitas',
+                DB::raw('NULL as jarak_km'),
+                'art.durasi_jam', 
+                'art.emisi_karbon',
+                'art.tanggal'
+            )
+            ->get();
 
         return response()->json([
-            'total_user'  => $totalUser,
-            'total_emisi' => $totalEmisi,
-            'chart_data'  => $chartData,
+            'success' => true,
+            'data' => $transportasi->merge($rumahTangga)->sortByDesc('tanggal')->values()
+        ]);
+    }
+
+    public function getStats()
+    {
+        $totalUsers = DB::table('users')->where('role', '!=', 'admin')->count();
+
+        $totalEmisi = DB::table('aktivitas_transportasi')->sum('emisi_karbon')
+            + DB::table('aktivitas_rumah_tangga')->sum('emisi_karbon');
+
+        $emisiPerUser = DB::table('users')
+            ->where('role', '!=', 'admin')
+            ->select('users.id', 'users.name', 'users.email')
+            ->get()
+            ->map(function ($user) {
+                $emisiTr = DB::table('aktivitas_transportasi')
+                    ->where('user_id', $user->id)->sum('emisi_karbon');
+                $emisiRt = DB::table('aktivitas_rumah_tangga')
+                    ->where('user_id', $user->id)->sum('emisi_karbon');
+                $user->total_emisi = round($emisiTr + $emisiRt, 2);
+                return $user;
+            });
+
+        return response()->json([
+            'success'       => true,
+            'total_users'   => $totalUsers,
+            'total_emisi'   => round($totalEmisi, 2),
+            'emisi_per_user' => $emisiPerUser,
         ]);
     }
 }
